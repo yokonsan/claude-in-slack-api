@@ -24,7 +24,6 @@ class SlackClient(AsyncWebClient):
 
     async def open_channel(self):
         if not self.CHANNEL_ID:
-            print(111)
             response = await self.conversations_open(users=CLAUDE_BOT_ID)
             self.CHANNEL_ID = response["channel"]["id"]
 
@@ -43,6 +42,27 @@ class SlackClient(AsyncWebClient):
 
         raise Exception("Get replay timeout")
 
+    async def get_stream_reply(self):
+        l = 0
+        for _ in range(150):
+            try:
+                resp = await self.conversations_history(channel=self.CHANNEL_ID, oldest=self.LAST_TS, limit=2)
+                msg = [msg["text"] for msg in resp["messages"] if msg["user"] == CLAUDE_BOT_ID]
+                if msg:
+                    last_msg = msg[-1]
+                    more = False
+                    if msg[-1].endswith("Typing…_"):
+                        last_msg = str(msg[-1])[:-11] # remove typing…
+                        more = True
+                    diff = last_msg[l:]
+                    l = len(last_msg)
+                    yield diff
+                    if not more:
+                        break
+            except (SlackApiError, KeyError) as e:
+                print(f"Get reply error: {e}")
+
+            await asyncio.sleep(2)
 
 client = SlackClient(token=getenv("SLACK_USER_TOKEN"))
 

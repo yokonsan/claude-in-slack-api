@@ -3,6 +3,7 @@ from typing import Union
 
 from fastapi import FastAPI, Depends, Header, HTTPException, status
 from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
 
 from slack import client
 
@@ -33,6 +34,21 @@ async def chat(body: ClaudeChatPrompt):
         "claude": await client.get_reply()
     }
 
+# add --no-buffer to see the effect of streaming
+# curl -X 'POST'  --no-buffer \
+#  'http://127.0.0.1:8088/claude/stream_chat' \
+#  -H 'accept: text/plain' \
+#  -H 'Content-Type: application/json' \
+#  -d '{
+#  "prompt": "今天天气很不错吧"}'
+@app.post("/claude/stream_chat", dependencies=[Depends(must_token)])
+async def chat(body: ClaudeChatPrompt):
+    await client.open_channel()
+    await client.chat(body.prompt)
+
+    sr = client.get_stream_reply()
+
+    return StreamingResponse(sr, media_type="text/plain")
 
 @app.post("/claude/reset", dependencies=[Depends(must_token)])
 async def chat():
