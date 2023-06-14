@@ -4,6 +4,7 @@ from typing import Union
 from fastapi import FastAPI, Depends, Header, HTTPException, status
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from sse_starlette.sse import EventSourceResponse
 
 from slack import client
 
@@ -45,10 +46,7 @@ async def chat(body: ClaudeChatPrompt):
 async def chat(body: ClaudeChatPrompt):
     await client.open_channel()
     await client.chat(body.prompt)
-
-    sr = client.get_stream_reply()
-
-    return StreamingResponse(sr, media_type="text/plain")
+    return EventSourceResponse(client.get_stream_reply(), ping=100)
 
 @app.post("/claude/reset", dependencies=[Depends(must_token)])
 async def chat():

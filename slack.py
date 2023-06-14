@@ -55,6 +55,8 @@ class SlackClient(AsyncWebClient):
                         last_msg = str(msg[-1])[:-11] # remove typing…
                         more = True
                     diff = last_msg[l:]
+                    if diff == "":
+                        continue
                     l = len(last_msg)
                     yield diff
                     if not more:
